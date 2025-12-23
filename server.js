@@ -22,6 +22,8 @@ app.get("/menu-discovery.js", (req, res) => {
     ? path.join(__dirname, "menu-discovery.js")
     : path.join(__dirname, "../src/menu-discovery.js");
 
+  console.log("Script path:", scriptPath);
+
   // Check if file exists
   if (!fs.existsSync(scriptPath)) {
     return res.status(404).json({ error: "Script file not found" });
@@ -38,6 +40,8 @@ app.get("/menu-discovery.js", (req, res) => {
     res.setHeader("Content-Type", "application/javascript; charset=utf-8");
     res.setHeader("Cache-Control", "public, max-age=3600"); // Cache for 1 hour
     res.setHeader("X-Content-Type-Options", "nosniff");
+
+    console.log("Script data length:", data.length);
 
     res.send(data);
   });
