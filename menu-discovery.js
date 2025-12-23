@@ -5,6 +5,9 @@
 (function () {
   "use strict";
 
+  // Set flag to confirm script is running (used by extension to verify injection)
+  window.__HEATMAP_MENU_DISCOVERY_LOADED__ = true;
+
   // Notify extension about step changes
   function notifyExtension(stepInfo) {
     window.postMessage(
