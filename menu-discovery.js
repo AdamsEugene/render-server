@@ -1817,35 +1817,152 @@
     // EVENT HANDLERS
     // ============================================
     handlers: {
+      countdownOverlay: null,
+      countdownInterval: null,
+      hoverStartTime: null,
+
+      createCountdownOverlay() {
+        if (this.countdownOverlay) return this.countdownOverlay;
+
+        const overlay = document.createElement("div");
+        overlay.id = "heatmap-hover-countdown";
+        overlay.style.cssText = `
+          position: fixed;
+          top: 10px;
+          right: 10px;
+          background: linear-gradient(135deg, #00C48C 0%, #14B8A6 100%);
+          color: white;
+          padding: 12px 20px;
+          border-radius: 8px;
+          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+          font-size: 14px;
+          font-weight: 600;
+          z-index: 2147483647;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          display: none;
+          pointer-events: none;
+        `;
+        document.body.appendChild(overlay);
+        this.countdownOverlay = overlay;
+        return overlay;
+      },
+
+      showCountdown(seconds) {
+        const overlay = this.createCountdownOverlay();
+        overlay.textContent = `🎯 Hold for ${seconds}s...`;
+        overlay.style.display = "block";
+      },
+
+      hideCountdown() {
+        if (this.countdownOverlay) {
+          this.countdownOverlay.style.display = "none";
+        }
+        if (this.countdownInterval) {
+          clearInterval(this.countdownInterval);
+          this.countdownInterval = null;
+        }
+      },
+
       onMouseOver(event) {
         const target = event.target;
-        const { state, config } = HoverDetector;
+        const { state, config, outline } = HoverDetector;
+        const handlers = HoverDetector.handlers;
 
         if (state.isConfirming || state.isConfirmingMenu || state.isFrozen)
           return;
-        if (target === state.currentElement) return;
+
+        // Ignore body, html, and very small elements
+        if (target === document.body || target === document.documentElement)
+          return;
+
+        const rect = target.getBoundingClientRect();
+        if (rect.width < 20 || rect.height < 20) return;
+
+        // If already tracking this element or a child of it, keep the timer
+        if (state.currentElement) {
+          if (
+            state.currentElement === target ||
+            state.currentElement.contains(target)
+          ) {
+            return;
+          }
+          // Check if target is a parent of current element (moving up)
+          if (target.contains(state.currentElement)) {
+            return;
+          }
+        }
+
+        // Clear previous tracking
+        if (state.hoverTimeout) {
+          clearTimeout(state.hoverTimeout);
+          handlers.hideCountdown();
+          if (state.currentElement) {
+            outline.hide(state.currentElement);
+          }
+        }
 
         state.currentElement = target;
-        if (state.hoverTimeout) clearTimeout(state.hoverTimeout);
+        handlers.hoverStartTime = Date.now();
+
+        // Show visual feedback
+        outline.show(target, "#00C48C");
+
+        // Start countdown display
+        let remainingSeconds = Math.ceil(config.hoverDelay / 1000);
+        handlers.showCountdown(remainingSeconds);
+
+        handlers.countdownInterval = setInterval(() => {
+          const elapsed = Date.now() - handlers.hoverStartTime;
+          remainingSeconds = Math.ceil((config.hoverDelay - elapsed) / 1000);
+          if (remainingSeconds > 0) {
+            handlers.showCountdown(remainingSeconds);
+          }
+        }, 200);
 
         state.hoverTimeout = setTimeout(() => {
+          handlers.hideCountdown();
+          outline.hide(target);
           HoverDetector.captureElement(target);
         }, config.hoverDelay);
       },
 
       onMouseOut(event) {
-        const { state } = HoverDetector;
+        const { state, outline } = HoverDetector;
+        const handlers = HoverDetector.handlers;
 
         if (state.isConfirming || state.isConfirmingMenu || state.isFrozen)
           return;
 
-        if (event.target === state.currentElement) {
-          if (state.hoverTimeout) {
-            clearTimeout(state.hoverTimeout);
-            state.hoverTimeout = null;
-          }
-          state.currentElement = null;
+        // Check if we're moving to a child element - if so, keep the timer
+        const relatedTarget = event.relatedTarget;
+        if (
+          relatedTarget &&
+          state.currentElement &&
+          (state.currentElement.contains(relatedTarget) ||
+            relatedTarget === state.currentElement)
+        ) {
+          return;
         }
+
+        // Check if we're moving to a parent - if so, keep the timer
+        if (
+          relatedTarget &&
+          state.currentElement &&
+          relatedTarget.contains(state.currentElement)
+        ) {
+          return;
+        }
+
+        // Actually leaving the element
+        if (state.hoverTimeout) {
+          clearTimeout(state.hoverTimeout);
+          state.hoverTimeout = null;
+        }
+        handlers.hideCountdown();
+        if (state.currentElement) {
+          outline.hide(state.currentElement);
+        }
+        state.currentElement = null;
       },
     },
 
