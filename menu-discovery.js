@@ -19,14 +19,25 @@
 
   // Console styling
   const styles = {
-    title: "color: #10b981; font-size: 16px; font-weight: bold;",
-    divider: "color: #10b981;",
-    success: "color: #10b981; font-weight: bold;",
-    info: "color: #3b82f6; font-weight: bold;",
+    title: "color: #00C48C; font-size: 16px; font-weight: bold;",
+    divider: "color: #00C48C;",
+    success: "color: #00C48C; font-weight: bold;",
+    info: "color: #14B8A6; font-weight: bold;",
     warning: "color: #f59e0b; font-weight: bold;",
     error: "color: #ef4444; font-weight: bold;",
     code: "background: #1e293b; color: #e2e8f0; padding: 2px 6px; border-radius: 3px;",
   };
+
+  // Notify extension about step changes
+  function notifyExtension(stepInfo) {
+    window.postMessage(
+      {
+        type: "MENU_DISCOVERY_STEP",
+        ...stepInfo,
+      },
+      "*"
+    );
+  }
 
   // Utility: Log with style
   function log(message, style = "") {
@@ -555,6 +566,16 @@
       log("");
       log("⏳ Waiting for menu button click...", styles.info);
 
+      // Notify extension
+      notifyExtension({
+        step: "INIT",
+        title: "Click on the menu button",
+        message:
+          "Click on the hamburger menu or menu button you want to detect",
+        showButtons: false,
+        waiting: true,
+      });
+
       // Remove any existing listener
       if (state.clickListener) {
         document.removeEventListener("click", state.clickListener, true);
@@ -580,6 +601,16 @@
         log("❓ Is this the menu button?", styles.warning);
         log("   → Type: window.yes() or window.no()");
 
+        // Notify extension
+        notifyExtension({
+          step: "CONFIRM_BUTTON",
+          title: "Is this the menu button?",
+          message: `Detected: ${state.menuButtonSelector}`,
+          showButtons: true,
+          yesText: "Yes, this is it",
+          noText: "No, try again",
+        });
+
         state.step = "CONFIRM_BUTTON";
         document.removeEventListener("click", state.clickListener, true);
       };
@@ -594,6 +625,15 @@
         state.menuButton = null;
         state.menuButtonSelector = null;
         state.step = "INIT";
+
+        notifyExtension({
+          step: "INIT",
+          title: "Click on the menu button",
+          message: "Try clicking on the correct menu button",
+          showButtons: false,
+          waiting: true,
+        });
+
         document.addEventListener("click", state.clickListener, true);
         return;
       }
@@ -619,6 +659,14 @@
 
       log("🔄 Now clicking the button to open the menu...", styles.info);
 
+      notifyExtension({
+        step: "OPENING_MENU",
+        title: "Opening menu...",
+        message: "Clicking the button to open the menu",
+        showButtons: false,
+        waiting: true,
+      });
+
       // Programmatically click the button after a delay
       setTimeout(() => {
         // Create and dispatch a real click event
@@ -633,6 +681,16 @@
           log("");
           log("❓ Did the menu just open?", styles.warning);
           log("   → Type: window.yes() or window.no()");
+
+          notifyExtension({
+            step: "CONFIRM_OPENED",
+            title: "Did the menu open?",
+            message: "Check if the menu is now visible on the page",
+            showButtons: true,
+            yesText: "Yes, it opened",
+            noText: "No, it didn't",
+          });
+
           state.step = "CONFIRM_OPENED";
         }, 500);
       }, 300);
@@ -649,6 +707,16 @@
         log("");
         log("   Would you like to try selecting a different menu element?");
         log("   → Type: window.yes() to restart, window.no() to abort");
+
+        notifyExtension({
+          step: "RETRY_OR_ABORT",
+          title: "Menu didn't open",
+          message: "Would you like to try again?",
+          showButtons: true,
+          yesText: "Try again",
+          noText: "Cancel",
+        });
+
         state.step = "RETRY_OR_ABORT";
         return;
       }
@@ -723,9 +791,27 @@
       if (state.mutations.length === 0) {
         log("⚠️ Could not detect menu state changes.", styles.error);
         log("   This site may require a custom solution.");
+
+        notifyExtension({
+          step: "COMPLETE",
+          title: "No changes detected",
+          message:
+            "Could not detect menu state changes. This site may need a custom solution.",
+          showButtons: false,
+          error: true,
+        });
+
         state.step = "COMPLETE";
         return;
       }
+
+      notifyExtension({
+        step: "TESTING",
+        title: "Testing menu toggle...",
+        message: `Detected ${state.mutations.length} change(s). Testing...`,
+        showButtons: false,
+        waiting: true,
+      });
 
       log("🔄 Testing by toggling the menu...", styles.info);
 
@@ -739,6 +825,16 @@
           log("");
           log("❓ Is the menu currently OPEN?", styles.warning);
           log("   → Type: window.yes() or window.no()");
+
+          notifyExtension({
+            step: "CONFIRM_FINAL_STATE",
+            title: "Is the menu currently open?",
+            message: "After testing, check if the menu is open or closed",
+            showButtons: true,
+            yesText: "Yes, it's open",
+            noText: "No, it's closed",
+          });
+
           state.step = "CONFIRM_FINAL_STATE";
           return;
         }
@@ -772,6 +868,15 @@
         log("");
         log("❌ Discovery aborted.", styles.error);
         log("   This site may require manual menu fix implementation.");
+
+        notifyExtension({
+          step: "COMPLETE",
+          title: "Discovery cancelled",
+          message: "You can try again or implement a custom solution.",
+          showButtons: false,
+          error: true,
+        });
+
         state.step = "COMPLETE";
       }
     },
@@ -814,6 +919,15 @@
 
       log("");
       log("💡 Tip: Code is available as window.menuFixCode");
+
+      notifyExtension({
+        step: "COMPLETE",
+        title: "🎉 Discovery complete!",
+        message: `Button: ${state.menuButtonSelector}\nMenu: ${state.menuElementSelector}\n\nCode copied to console.`,
+        showButtons: false,
+        success: true,
+        code: fixCode,
+      });
 
       state.step = "COMPLETE";
     },
@@ -881,5 +995,12 @@
     steps.INIT();
   } catch (error) {
     console.error("[MenuDiscovery] Initialization failed:", error);
+    notifyExtension({
+      step: "ERROR",
+      title: "Error",
+      message: error.message,
+      showButtons: false,
+      error: true,
+    });
   }
 })();

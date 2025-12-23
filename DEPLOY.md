@@ -12,7 +12,7 @@ Make sure your `render-server` folder is committed and pushed to your GitHub rep
 3. Connect your GitHub repository
 4. Configure the service:
    - **Name**: `menu-discovery-server` (or your preferred name)
-   - **Root Directory**: `render-server` (since it's now at the root level)
+   - **Root Directory**: (leave empty - repository root is already the server directory)
    - **Environment**: `Node`
    - **Build Command**: `npm install`
    - **Start Command**: `npm start`
