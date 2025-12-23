@@ -632,7 +632,10 @@
               }
             }
 
-            if (mutation.type === "childList" && mutation.addedNodes.length > 0) {
+            if (
+              mutation.type === "childList" &&
+              mutation.addedNodes.length > 0
+            ) {
               mutation.addedNodes.forEach((node) => {
                 if (node.nodeType === Node.ELEMENT_NODE) {
                   const rect = node.getBoundingClientRect();
@@ -919,7 +922,9 @@
             log.divider();
             log.promptMenu("Now let's capture the MENU/POPUP element");
             log.divider();
-            log.info("Please hover over the menu/popup for 2 seconds to confirm");
+            log.info(
+              "Please hover over the menu/popup for 2 seconds to confirm"
+            );
             log.muted("The page is frozen - the menu will stay open");
             log.divider();
 
@@ -1348,7 +1353,8 @@
         notifyExtension({
           step: "NO_MORE_MENUS",
           title: "No more menu elements",
-          message: "Try hovering over a different area, or cancel to start over.",
+          message:
+            "Try hovering over a different area, or cancel to start over.",
           showButtons: true,
           yesText: "Retry",
           noText: "Cancel",
@@ -1391,8 +1397,15 @@
     },
 
     confirmMenuYes() {
-      const { state, log, outline, freeze, mutation, snippetGenerator, selector } =
-        this;
+      const {
+        state,
+        log,
+        outline,
+        freeze,
+        mutation,
+        snippetGenerator,
+        selector,
+      } = this;
 
       if (!state.isConfirmingMenu) {
         log.warn("No menu confirmation in progress");
